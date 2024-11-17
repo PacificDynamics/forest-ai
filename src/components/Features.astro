@@ -1,0 +1,65 @@
+---
+const features = [
+  {
+    title: 'Advanced Tree Detection',
+    description: 'Automatically identify and count trees from drone imagery using state-of-the-art AI models.',
+    icon: 'tree'
+  },
+  {
+    title: 'Health Analysis',
+    description: 'Monitor forest health through spectral analysis and early disease detection.',
+    icon: 'activity'
+  },
+  {
+    title: 'Growth Tracking',
+    description: 'Track forest growth over time with precise measurements and change detection.',
+    icon: 'trending-up'
+  },
+  {
+    title: 'Species Classification',
+    description: 'Identify tree species using AI-powered image recognition.',
+    icon: 'layers'
+  },
+  {
+    title: 'Environmental Impact',
+    description: 'Calculate carbon sequestration and biodiversity metrics.',
+    icon: 'leaf'
+  },
+  {
+    title: 'Report Generation',
+    description: 'Generate detailed reports with insights and recommendations.',
+    icon: 'file-text'
+  }
+];
+---
+
+<section class="py-24 sm:py-32">
+  <div class="mx-auto max-w-7xl px-6 lg:px-8">
+    <div class="mx-auto max-w-2xl lg:text-center">
+      <h2 class="text-base font-semibold leading-7 text-green-600">Advanced Analytics</h2>
+      <p class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+        Everything you need for forest analysis
+      </p>
+      <p class="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
+        Our platform combines drone imagery with artificial intelligence to provide comprehensive forest insights.
+      </p>
+    </div>
+    <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+      <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+        {features.map((feature) => (
+          <div class="flex flex-col">
+            <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900 dark:text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-none text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <use href={`/icons/${feature.icon}.svg#icon`}></use>
+              </svg>
+              {feature.title}
+            </dt>
+            <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600 dark:text-gray-300">
+              <p class="flex-auto">{feature.description}</p>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </div>
+</section>
