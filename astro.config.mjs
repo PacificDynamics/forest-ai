@@ -18,6 +18,10 @@ export default defineConfig({
     },
     ssr: {
       noExternal: ['lucide-react']
-    }
+    },
+    // Add environment variable prefix
+    envPrefix: [
+      'FOREST_AI_'
+    ]
   }
 });

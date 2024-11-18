@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { fromIni } from '@aws-sdk/credential-providers';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -13,10 +12,13 @@ export const POST: APIRoute = async ({ request }) => {
       }), { status: 400 });
     }
 
-    // Create S3 client with specific profile
+    // Create S3 client with custom environment variables
     const s3Client = new S3Client({
-      region: 'us-east-1',
-      credentials: fromIni({ profile: 'my-profile' }) // Use my-profile credentials
+      region: process.env.FOREST_AI_AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.FOREST_AI_S3_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.FOREST_AI_S3_ACCESS_KEY || ''
+      }
     });
 
     // Generate unique filename
@@ -34,6 +36,12 @@ export const POST: APIRoute = async ({ request }) => {
       ContentType: file.type
     });
 
+    console.log('Uploading with credentials:', {
+      hasAccessKey: !!process.env.FOREST_AI_S3_ACCESS_KEY_ID,
+      hasSecretKey: !!process.env.FOREST_AI_S3_ACCESS_KEY,
+      region: process.env.FOREST_AI_AWS_REGION
+    });
+
     await s3Client.send(command);
 
     return new Response(JSON.stringify({
@@ -44,7 +52,12 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (error) {
     console.error('Upload error:', error);
     return new Response(JSON.stringify({
-      error: 'Upload failed: ' + (error.message || 'Unknown error')
+      error: 'Upload failed: ' + (error.message || 'Unknown error'),
+      details: {
+        hasAccessKey: !!process.env.FOREST_AI_S3_ACCESS_KEY_ID,
+        hasSecretKey: !!process.env.FOREST_AI_S3_ACCESS_KEY,
+        region: process.env.FOREST_AI_AWS_REGION
+      }
     }), { status: 500 });
   }
 };
