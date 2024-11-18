@@ -4,10 +4,20 @@ import react from '@astrojs/react';
 import netlify from '@astrojs/netlify/functions';
 
 export default defineConfig({
-  integrations: [
-    tailwind(),
-    react(),
-  ],
+  integrations: [tailwind(), react()],
   output: 'server',
   adapter: netlify(),
+  vite: {
+    build: {
+      rollupOptions: {
+        external: [
+          '@aws-sdk/client-s3',
+          '@aws-sdk/credential-providers'
+        ]
+      }
+    },
+    ssr: {
+      noExternal: ['lucide-react']
+    }
+  }
 });

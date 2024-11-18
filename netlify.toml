@@ -3,6 +3,13 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[build.environment]
+  NODE_VERSION = "18"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@aws-sdk/client-s3", "@aws-sdk/credential-providers"]
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -10,8 +17,3 @@
 
 [dev]
   framework = "astro"
-  targetPort = 3000
-
-[functions]
-  external_node_modules = ["@astrojs/netlify/functions"]
-  included_files = ["dist/**"]
