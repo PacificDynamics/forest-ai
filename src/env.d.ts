@@ -1,8 +1,8 @@
 /// <reference types="astro/client" />
 interface ImportMetaEnv {
-  readonly AWS_ACCESS_KEY_ID: string;
-  readonly AWS_SECRET_ACCESS_KEY: string;
-  readonly AWS_REGION: string;
+  readonly FOREST_AI_S3_ACCESS_KEY_ID: string;
+  readonly FOREST_AI_S3_ACCESS_KEY: string;
+  readonly FOREST_AI_AWS_REGION: string;
 }
 
 interface ImportMeta {
