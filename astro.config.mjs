@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import react from '@astrojs/react';
 import netlify from '@astrojs/netlify/functions';
+import 'dotenv/config';  // Add this line at the top
 
 export default defineConfig({
   integrations: [tailwind(), react()],
@@ -19,9 +20,12 @@ export default defineConfig({
     ssr: {
       noExternal: ['lucide-react']
     },
-    // Add environment variable prefix
-    envPrefix: [
-      'FOREST_AI_'
-    ]
+    // Update environment variable configuration
+    envPrefix: ['FOREST_AI_'],
+    define: {
+      'process.env.FOREST_AI_AWS_REGION': JSON.stringify(process.env.FOREST_AI_AWS_REGION),
+      'process.env.FOREST_AI_S3_ACCESS_KEY_ID': JSON.stringify(process.env.FOREST_AI_S3_ACCESS_KEY_ID),
+      'process.env.FOREST_AI_S3_ACCESS_KEY': JSON.stringify(process.env.FOREST_AI_S3_ACCESS_KEY)
+    }
   }
 });

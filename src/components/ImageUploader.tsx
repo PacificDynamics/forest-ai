@@ -63,9 +63,19 @@ const ImageUploader = () => {
         throw new Error(data.error || 'Upload failed');
       }
 
+      // Dispatch event for the HTML viewer
+      const event = new CustomEvent('imageUploaded', {
+        detail: { 
+          filename: data.filename,
+          // Also construct the HTML filename
+          htmlFilename: data.filename.replace(/\.[^/.]+$/, ".html")
+        }
+      });
+      document.dispatchEvent(event);
+
       setStatus({
         type: 'success',
-        message: 'Image uploaded successfully! Check your email for the analysis report.'
+        message: 'Image uploaded successfully! Analysis report will appear on the right.'
       });
 
       // Reset form
@@ -82,7 +92,7 @@ const ImageUploader = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+    <div className="w-full p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* File Upload Area */}
         <div className="space-y-2">

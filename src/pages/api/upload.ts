@@ -3,6 +3,24 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // Debug logging
+    console.log('Environment check:', {
+      region: process.env.FOREST_AI_AWS_REGION,
+      hasAccessKeyId: Boolean(process.env.FOREST_AI_S3_ACCESS_KEY_ID),
+      hasSecretKey: Boolean(process.env.FOREST_AI_S3_ACCESS_KEY)
+    });
+
+    // Validate environment variables first
+    if (!process.env.FOREST_AI_S3_ACCESS_KEY_ID) {
+      throw new Error('AWS Access Key ID is missing');
+    }
+    if (!process.env.FOREST_AI_S3_ACCESS_KEY) {
+      throw new Error('AWS Secret Access Key is missing');
+    }
+    if (!process.env.FOREST_AI_AWS_REGION) {
+      throw new Error('AWS Region is missing');
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -14,10 +32,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Create S3 client with custom environment variables
     const s3Client = new S3Client({
-      region: process.env.FOREST_AI_AWS_REGION || 'us-east-1',
+      region: process.env.FOREST_AI_AWS_REGION,
       credentials: {
-        accessKeyId: process.env.FOREST_AI_S3_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.FOREST_AI_S3_ACCESS_KEY || ''
+        accessKeyId: process.env.FOREST_AI_S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.FOREST_AI_S3_ACCESS_KEY
       }
     });
 
@@ -36,12 +54,6 @@ export const POST: APIRoute = async ({ request }) => {
       ContentType: file.type
     });
 
-    console.log('Uploading with credentials:', {
-      hasAccessKey: !!process.env.FOREST_AI_S3_ACCESS_KEY_ID,
-      hasSecretKey: !!process.env.FOREST_AI_S3_ACCESS_KEY,
-      region: process.env.FOREST_AI_AWS_REGION
-    });
-
     await s3Client.send(command);
 
     return new Response(JSON.stringify({
@@ -50,13 +62,21 @@ export const POST: APIRoute = async ({ request }) => {
     }), { status: 200 });
 
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Upload error:', {
+      message: error.message,
+      env: {
+        hasRegion: Boolean(process.env.FOREST_AI_AWS_REGION),
+        hasAccessKeyId: Boolean(process.env.FOREST_AI_S3_ACCESS_KEY_ID),
+        hasSecretKey: Boolean(process.env.FOREST_AI_S3_ACCESS_KEY)
+      }
+    });
+
     return new Response(JSON.stringify({
-      error: 'Upload failed: ' + (error.message || 'Unknown error'),
+      error: 'Upload failed: ' + error.message,
       details: {
-        hasAccessKey: !!process.env.FOREST_AI_S3_ACCESS_KEY_ID,
-        hasSecretKey: !!process.env.FOREST_AI_S3_ACCESS_KEY,
-        region: process.env.FOREST_AI_AWS_REGION
+        hasRegion: Boolean(process.env.FOREST_AI_AWS_REGION),
+        hasAccessKeyId: Boolean(process.env.FOREST_AI_S3_ACCESS_KEY_ID),
+        hasSecretKey: Boolean(process.env.FOREST_AI_S3_ACCESS_KEY)
       }
     }), { status: 500 });
   }

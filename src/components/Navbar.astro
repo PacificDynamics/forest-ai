@@ -69,7 +69,16 @@ const navigation = [
       <div class="flex items-center justify-between">
         <a href="/" class="-m-1.5 p-1.5">
           <span class="sr-only">ForestAI Platform</span>
-          <img class="h-8 w-auto" src="/logo.svg" alt="ForestAI Logo" />
+          <!-- Replace the img tag with inline SVG -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" class="h-8 w-auto">
+            <g fill="#2B9348">
+              <path d="M20 30L10 15L30 15Z" />
+              <path d="M35 30L25 15L45 15Z" />
+            </g>
+            <text x="55" y="27" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1B4332">
+              Forest<tspan fill="#2B9348">AI</tspan>
+            </text>
+          </svg>
         </a>
         <button
           type="button"
