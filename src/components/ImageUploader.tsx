@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Camera, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { Camera, Upload, CheckCircle, AlertCircle, FileSpreadsheet } from 'lucide-react';
 
-const ImageUploader = () => {
+const FileUploader = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [email, setEmail] = useState('nextdrought@gmail.com'); // Default email
+  const [email, setEmail] = useState('nextdrought@gmail.com');
   const [preview, setPreview] = useState('');
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<{
@@ -11,25 +11,35 @@ const ImageUploader = () => {
     message: string;
   }>({ type: '', message: '' });
 
+  const isImage = (file: File) => file.type.startsWith('image/');
+  const isCsv = (file: File) => file.type === 'text/csv' || file.name.endsWith('.csv');
+  const isCogeotiff = (file: File) => file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff');
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       // Validate file type
-      if (!selectedFile.type.startsWith('image/')) {
+      if (!isImage(selectedFile) && !isCsv(selectedFile) && !isCogeotiff(selectedFile)) {
         setStatus({
           type: 'error',
-          message: 'Please select an image file.'
+          message: 'Please select an image, CSV, or cloud optimized GeoTIFF file.'
         });
         return;
       }
 
       setFile(selectedFile);
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(selectedFile);
+      
+      // Create preview for images only
+      if (isImage(selectedFile)) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreview(reader.result as string);
+        };
+        reader.readAsDataURL(selectedFile);
+      } else {
+        setPreview(''); // Clear preview for non-image files
+      }
+      
       setStatus({ type: '', message: '' });
     }
   };
@@ -39,7 +49,7 @@ const ImageUploader = () => {
     if (!file) {
       setStatus({
         type: 'error',
-        message: 'Please select an image to upload.'
+        message: 'Please select a file to upload.'
       });
       return;
     }
@@ -48,7 +58,6 @@ const ImageUploader = () => {
     setStatus({ type: '', message: '' });
 
     try {
-      // Upload directly to S3
       const formData = new FormData();
       formData.append('file', file);
 
@@ -64,10 +73,9 @@ const ImageUploader = () => {
       }
 
       // Dispatch event for the HTML viewer
-      const event = new CustomEvent('imageUploaded', {
+      const event = new CustomEvent('fileUploaded', {
         detail: { 
           filename: data.filename,
-          // Also construct the HTML filename
           htmlFilename: data.filename.replace(/\.[^/.]+$/, ".html")
         }
       });
@@ -75,7 +83,9 @@ const ImageUploader = () => {
 
       setStatus({
         type: 'success',
-        message: 'Image uploaded successfully! Analysis report will appear on the right.'
+        message: `File uploaded successfully! ${
+          isImage(file) ? 'Analysis report' : 'Visualization'
+        } will appear on the right.`
       });
 
       // Reset form
@@ -91,26 +101,35 @@ const ImageUploader = () => {
     }
   };
 
+  const getUploadIcon = () => {
+    if (file) {
+      if (isCsv(file)) return <FileSpreadsheet className="h-12 w-12 text-green-500" />;
+      if (isCogeotiff(file)) return <Camera className="h-12 w-12 text-blue-500" />;
+      return null; // No icon needed for image preview
+    }
+    return <Camera className="h-12 w-12 text-gray-400" />;
+  };
+
   return (
     <div className="w-full p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* File Upload Area */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Upload Forest Image
+            Upload File (Image, CSV, or GeoTIFF)
           </label>
           <div className="relative">
             <input
               type="file"
               onChange={handleFileChange}
-              accept="image/*"
+              accept="image/*,.csv,.tif,.tiff"
               className="hidden"
               id="file-upload"
             />
             <label
               htmlFor="file-upload"
               className={`relative cursor-pointer rounded-lg border-2 border-dashed p-6 flex flex-col items-center justify-center space-y-2
-                ${preview ? 'border-green-500' : 'border-gray-300 dark:border-gray-600'}
+                ${file ? 'border-green-500' : 'border-gray-300 dark:border-gray-600'}
                 hover:border-green-500 transition-colors`}
             >
               {preview ? (
@@ -123,12 +142,12 @@ const ImageUploader = () => {
                 </div>
               ) : (
                 <>
-                  <Camera className="h-12 w-12 text-gray-400" />
+                  {getUploadIcon()}
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Click to upload or drag and drop
+                    {file ? file.name : 'Click to upload or drag and drop'}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-500">
-                    Supported formats: JPG, PNG
+                    Supported formats: JPG, PNG, CSV, TIF/TIFF
                   </div>
                 </>
               )}
@@ -153,7 +172,7 @@ const ImageUploader = () => {
               Uploading...
             </>
           ) : (
-            'Upload Image'
+            'Upload File'
           )}
         </button>
 
@@ -193,4 +212,4 @@ const ImageUploader = () => {
   );
 };
 
-export default ImageUploader;
+export default FileUploader;
