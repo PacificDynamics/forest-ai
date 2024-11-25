@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, Upload, CheckCircle, AlertCircle, FileSpreadsheet } from 'lucide-react';
 
-const FileUploader = () => {
+const ImageUploader = () => {
   const [file, setFile] = useState<File | null>(null);
   const [email, setEmail] = useState('nextdrought@gmail.com');
   const [preview, setPreview] = useState('');
@@ -61,29 +61,32 @@ const FileUploader = () => {
       const formData = new FormData();
       formData.append('file', file);
 
+      console.log('Uploading file:', file.name); // Debug log
+
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
       const data = await response.json();
+      console.log('Upload response:', data); // Debug log
 
       if (!response.ok) {
         throw new Error(data.error || 'Upload failed');
       }
 
-      // Dispatch event for the HTML viewer
-      const event = new CustomEvent('fileUploaded', {
+      // Keep the original event dispatch for compatibility
+      const event = new CustomEvent('imageUploaded', {
         detail: { 
-          filename: data.filename,
-          htmlFilename: data.filename.replace(/\.[^/.]+$/, ".html")
+          filename: data.filename || file.name,
+          htmlFilename: (data.filename || file.name).replace(/\.[^/.]+$/, ".html")
         }
       });
       document.dispatchEvent(event);
 
       setStatus({
         type: 'success',
-        message: `File uploaded successfully! ${
+        message: `${file.name} uploaded successfully! ${
           isImage(file) ? 'Analysis report' : 'Visualization'
         } will appear on the right.`
       });
@@ -92,6 +95,7 @@ const FileUploader = () => {
       setFile(null);
       setPreview('');
     } catch (error) {
+      console.error('Upload error:', error); // Debug log
       setStatus({
         type: 'error',
         message: error instanceof Error ? error.message : 'Upload failed'
@@ -113,10 +117,9 @@ const FileUploader = () => {
   return (
     <div className="w-full p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* File Upload Area */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Upload File (Image, CSV, or GeoTIFF)
+            Upload Forest Data (Image, CSV, or GeoTIFF)
           </label>
           <div className="relative">
             <input
@@ -155,7 +158,6 @@ const FileUploader = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={!file || uploading}
@@ -176,7 +178,6 @@ const FileUploader = () => {
           )}
         </button>
 
-        {/* Status Message */}
         {status.type && (
           <div
             className={`p-4 rounded-md ${
@@ -212,4 +213,4 @@ const FileUploader = () => {
   );
 };
 
-export default FileUploader;
+export default ImageUploader;
