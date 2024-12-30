@@ -1,48 +1,84 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Camera, Upload, CheckCircle, AlertCircle, FileSpreadsheet } from 'lucide-react';
 
-const ImageUploader = () => {
+interface FileStatus {
+  type: 'success' | 'error' | '';
+  message: string;
+}
+
+interface UploadResponse {
+  success?: boolean;
+  filename?: string;
+  error?: string;
+  message?: string;
+}
+
+const ImageUploader: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [email, setEmail] = useState('nextdrought@gmail.com');
-  const [preview, setPreview] = useState('');
+  const [preview, setPreview] = useState<string>('');
   const [uploading, setUploading] = useState(false);
-  const [status, setStatus] = useState<{
-    type: 'success' | 'error' | '';
-    message: string;
-  }>({ type: '', message: '' });
+  const [status, setStatus] = useState<FileStatus>({ type: '', message: '' });
 
-  const isImage = (file: File) => file.type.startsWith('image/');
-  const isCsv = (file: File) => file.type === 'text/csv' || file.name.endsWith('.csv');
-  const isCogeotiff = (file: File) => file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff');
+  const isImage = useCallback((file: File) => {
+    return file.type.startsWith('image/');
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      // Validate file type
-      if (!isImage(selectedFile) && !isCsv(selectedFile) && !isCogeotiff(selectedFile)) {
-        setStatus({
-          type: 'error',
-          message: 'Please select an image, CSV, or cloud optimized GeoTIFF file.'
-        });
-        return;
-      }
+  const isCsv = useCallback((file: File) => {
+    return file.type === 'text/csv' || file.name.endsWith('.csv');
+  }, []);
 
-      setFile(selectedFile);
-      
-      // Create preview for images only
-      if (isImage(selectedFile)) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreview(reader.result as string);
-        };
-        reader.readAsDataURL(selectedFile);
-      } else {
-        setPreview(''); // Clear preview for non-image files
-      }
-      
-      setStatus({ type: '', message: '' });
+  const isGeotiff = useCallback((file: File) => {
+    return file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff');
+  }, []);
+
+  const validateFile = useCallback((file: File) => {
+    const maxSize = 100 * 1024 * 1024; // 100MB limit
+    if (file.size > maxSize) {
+      return 'File size exceeds 100MB limit';
     }
-  };
+    if (!isImage(file) && !isCsv(file) && !isGeotiff(file)) {
+      return 'Please select an image, CSV, or GeoTIFF file';
+    }
+    return null;
+  }, [isImage, isCsv, isGeotiff]);
+
+  const createPreview = useCallback((file: File) => {
+    if (!isImage(file)) {
+      setPreview('');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, [isImage]);
+
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) return;
+
+    const error = validateFile(selectedFile);
+    if (error) {
+      setStatus({
+        type: 'error',
+        message: error
+      });
+      return;
+    }
+
+    setFile(selectedFile);
+    createPreview(selectedFile);
+    setStatus({ type: '', message: '' });
+  }, [validateFile, createPreview]);
+
+  const getUploadIcon = useCallback((file: File | null) => {
+    if (!file) return <Camera className="h-12 w-12 text-gray-400" />;
+    if (isCsv(file)) return <FileSpreadsheet className="h-12 w-12 text-green-500" />;
+    if (isGeotiff(file)) return <Camera className="h-12 w-12 text-blue-500" />;
+    return null;
+  }, [isCsv, isGeotiff]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,21 +97,51 @@ const ImageUploader = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log('Uploading file:', file.name); // Debug log
+      console.log('Starting upload for:', file.name, 'Size:', file.size, 'Type:', file.type);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
-      const data = await response.json();
-      console.log('Upload response:', data); // Debug log
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Upload failed');
+      let data: UploadResponse;
+      const contentType = response.headers.get('content-type');
+      let textResponse = '';
+      
+      try {
+        textResponse = await response.text();
+        console.log('Raw response:', textResponse);
+        
+        if (textResponse) {
+          try {
+            data = JSON.parse(textResponse);
+          } catch {
+            data = {
+              success: response.ok,
+              message: textResponse,
+              filename: file.name
+            };
+          }
+        } else {
+          data = {
+            success: response.ok,
+            message: 'Upload completed',
+            filename: file.name
+          };
+        }
+      } catch (parseError) {
+        console.error('Response parsing error:', parseError);
+        throw new Error(`Failed to parse server response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
       }
 
-      // Keep the original event dispatch for compatibility
+      if (!response.ok) {
+        throw new Error(data.error || `Upload failed with status ${response.status}`);
+      }
+
+      // Dispatch success event
       const event = new CustomEvent('imageUploaded', {
         detail: { 
           filename: data.filename || file.name,
@@ -91,27 +157,20 @@ const ImageUploader = () => {
         } will appear on the right.`
       });
 
-      // Reset form
+      // Reset form state
       setFile(null);
       setPreview('');
     } catch (error) {
-      console.error('Upload error:', error); // Debug log
+      console.error('Upload error:', error);
       setStatus({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Upload failed'
+        message: error instanceof Error 
+          ? error.message 
+          : 'Failed to upload file. Please try again.'
       });
     } finally {
       setUploading(false);
     }
-  };
-
-  const getUploadIcon = () => {
-    if (file) {
-      if (isCsv(file)) return <FileSpreadsheet className="h-12 w-12 text-green-500" />;
-      if (isCogeotiff(file)) return <Camera className="h-12 w-12 text-blue-500" />;
-      return null; // No icon needed for image preview
-    }
-    return <Camera className="h-12 w-12 text-gray-400" />;
   };
 
   return (
@@ -145,7 +204,7 @@ const ImageUploader = () => {
                 </div>
               ) : (
                 <>
-                  {getUploadIcon()}
+                  {getUploadIcon(file)}
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     {file ? file.name : 'Click to upload or drag and drop'}
                   </div>
@@ -162,10 +221,9 @@ const ImageUploader = () => {
           type="submit"
           disabled={!file || uploading}
           className={`w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white
-            ${
-              uploading || !file
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
+            ${uploading || !file
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
             }`}
         >
           {uploading ? (
